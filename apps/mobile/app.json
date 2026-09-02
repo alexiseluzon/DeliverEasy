@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "DelivEasy",
+    "slug": "delivereasy",
+    "scheme": "delivereasy",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0E1116"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.delivereasy.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0E1116"
+      },
+      "package": "com.delivereasy.app",
+      "permissions": ["NOTIFICATIONS"]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#FF7A33"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": { "projectId": "REPLACE_WITH_EAS_PROJECT_ID" }
+    }
+  }
+}
