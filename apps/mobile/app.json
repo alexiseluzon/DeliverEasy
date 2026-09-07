@@ -10,7 +10,9 @@
     "splash": {
       "backgroundColor": "#0E1116"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.delivereasy.app"
@@ -20,7 +22,9 @@
         "backgroundColor": "#0E1116"
       },
       "package": "com.delivereasy.app",
-      "permissions": ["NOTIFICATIONS"]
+      "permissions": [
+        "NOTIFICATIONS"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -30,10 +34,8 @@
           "icon": "./assets/notification-icon.png",
           "color": "#FF7A33"
         }
-      ]
-    ],
-    "extra": {
-      "eas": { "projectId": "REPLACE_WITH_EAS_PROJECT_ID" }
-    }
+      ],
+      "expo-status-bar"
+    ]
   }
 }
