@@ -4,9 +4,18 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { RequireAuth } from "@/components/RequireAuth";
 import type { Product } from "@/types";
 
 export default function ProductsPage() {
+  return (
+    <RequireAuth roles={["vendor", "admin"]}>
+      <ProductsContent />
+    </RequireAuth>
+  );
+}
+
+function ProductsContent() {
   const { show } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,8 +48,7 @@ export default function ProductsPage() {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      // vendor_id is a placeholder until auth wiring lands
-      await api.post("/products?vendor_id=00000000-0000-0000-0000-000000000000", {
+      await api.post("/products", {
         name,
         price: Number(price),
         stock_quantity: Number(stock),

@@ -1,3 +1,5 @@
+import { getToken, clearSession } from "@/lib/auth";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 export class ApiError extends Error {
@@ -10,13 +12,23 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
+  const token = getToken();
 
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       ...init,
       signal: controller.signal,
-      headers: { "Content-Type": "application/json", ...init?.headers },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init?.headers,
+      },
     });
+
+    if (res.status === 401) {
+      clearSession();
+      if (typeof window !== "undefined") window.location.href = "/login";
+    }
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

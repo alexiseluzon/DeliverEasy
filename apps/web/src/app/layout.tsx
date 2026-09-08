@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Sidebar } from "@/components/Sidebar";
 import { ToastProvider } from "@/components/Toast";
+import { AuthProvider } from "@/components/AuthProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -34,14 +35,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
-        <ToastProvider>
-          <div style={{ display: "flex", minHeight: "100vh" }}>
-            <Sidebar />
-            <main id="main-content" style={{ flex: 1, padding: 32 }}>
-              {children}
-            </main>
-          </div>
-        </ToastProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <div style={{ display: "flex", minHeight: "100vh" }}>
+              <Sidebar />
+              <main id="main-content" style={{ flex: 1, padding: 32 }}>
+                {children}
+              </main>
+            </div>
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

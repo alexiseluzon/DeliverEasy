@@ -5,7 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.models import Product
+from app.core.deps import require_role
+from app.models.models import Product, User, UserRole
 from app.schemas.product import ProductCreate, ProductOut, ProductUpdate
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -36,10 +37,10 @@ async def get_product(product_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 @router.post("", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
 async def create_product(
     payload: ProductCreate,
-    vendor_id: uuid.UUID,  # TODO: replace with authenticated user from JWT dependency
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.VENDOR, UserRole.ADMIN)),
 ):
-    product = Product(vendor_id=vendor_id, **payload.model_dump())
+    product = Product(vendor_id=current_user.id, **payload.model_dump())
     db.add(product)
     await db.commit()
     await db.refresh(product)
@@ -48,11 +49,16 @@ async def create_product(
 
 @router.patch("/{product_id}", response_model=ProductOut)
 async def update_product(
-    product_id: uuid.UUID, payload: ProductUpdate, db: AsyncSession = Depends(get_db)
+    product_id: uuid.UUID,
+    payload: ProductUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.VENDOR, UserRole.ADMIN)),
 ):
     product = await db.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    if current_user.role != UserRole.ADMIN and product.vendor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your product")
 
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(product, field, value)
@@ -63,9 +69,15 @@ async def update_product(
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_product(product_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def delete_product(
+    product_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.VENDOR, UserRole.ADMIN)),
+):
     product = await db.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    if current_user.role != UserRole.ADMIN and product.vendor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your product")
     product.is_active = False  # soft delete — keeps order history intact
     await db.commit()
