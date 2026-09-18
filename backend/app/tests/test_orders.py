@@ -125,3 +125,53 @@ async def test_status_transition_flow_and_rider_assignment(client):
     )
     assert picked_up.status_code == 200
     assert picked_up.json()["rider_id"] == rider_id
+
+
+@pytest.mark.asyncio
+async def test_vendor_only_sees_orders_with_own_products(client):
+    vendor_a_token, vendor_a_id = await _register(client, "vendora@example.com", "vendor")
+    vendor_b_token, _ = await _register(client, "vendorb@example.com", "vendor")
+    product_a = await _make_product(client, vendor_a_token)
+    product_b = await _make_product(client, vendor_b_token)
+    customer_token, _ = await _register(client, "custvendor@example.com", "customer")
+
+    order_a = await client.post(
+        "/api/v1/orders",
+        json={"delivery_address": "A St", "items": [{"product_id": product_a, "quantity": 1}]},
+        headers={"Authorization": f"Bearer {customer_token}"},
+    )
+    order_b = await client.post(
+        "/api/v1/orders",
+        json={"delivery_address": "B St", "items": [{"product_id": product_b, "quantity": 1}]},
+        headers={"Authorization": f"Bearer {customer_token}"},
+    )
+
+    listing = await client.get("/api/v1/orders", headers={"Authorization": f"Bearer {vendor_a_token}"})
+    order_ids = [o["id"] for o in listing.json()]
+    assert order_a.json()["id"] in order_ids
+    assert order_b.json()["id"] not in order_ids
+
+
+@pytest.mark.asyncio
+async def test_vendor_cannot_view_or_update_others_order(client):
+    vendor_a_token, _ = await _register(client, "vendorc@example.com", "vendor")
+    vendor_b_token, _ = await _register(client, "vendord@example.com", "vendor")
+    product_b = await _make_product(client, vendor_b_token)
+    customer_token, _ = await _register(client, "custvendor2@example.com", "customer")
+
+    order = await client.post(
+        "/api/v1/orders",
+        json={"delivery_address": "C St", "items": [{"product_id": product_b, "quantity": 1}]},
+        headers={"Authorization": f"Bearer {customer_token}"},
+    )
+    order_id = order.json()["id"]
+
+    view = await client.get(f"/api/v1/orders/{order_id}", headers={"Authorization": f"Bearer {vendor_a_token}"})
+    assert view.status_code == 403
+
+    update = await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {vendor_a_token}"},
+    )
+    assert update.status_code == 403

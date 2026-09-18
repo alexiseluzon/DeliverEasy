@@ -31,14 +31,20 @@ async def _get_order_or_404(order_id: uuid.UUID, db: AsyncSession) -> Order:
     return order
 
 
-def _assert_can_view(order: Order, user: User) -> None:
-    allowed = user.role == UserRole.ADMIN or user.id in (order.customer_id, order.rider_id)
-    if not allowed and user.role == UserRole.VENDOR:
-        # Vendors may view orders containing at least one of their own products —
-        # checked by the caller since it needs a DB query.
+async def _vendor_owns_order(order: Order, vendor_id: uuid.UUID, db: AsyncSession) -> bool:
+    product_ids = [item.product_id for item in order.items]
+    if not product_ids:
+        return False
+    stmt = select(Product.id).where(Product.id.in_(product_ids), Product.vendor_id == vendor_id).limit(1)
+    return await db.scalar(stmt) is not None
+
+
+async def _assert_can_view(order: Order, user: User, db: AsyncSession) -> None:
+    if user.role == UserRole.ADMIN or user.id in (order.customer_id, order.rider_id):
         return
-    if not allowed and user.role != UserRole.VENDOR:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your order")
+    if user.role == UserRole.VENDOR and await _vendor_owns_order(order, user.id, db):
+        return
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your order")
 
 
 @router.post("", response_model=OrderOut, status_code=status.HTTP_201_CREATED)
@@ -94,7 +100,14 @@ async def list_my_orders(
         stmt = stmt.where(Order.customer_id == current_user.id)
     elif current_user.role == UserRole.RIDER:
         stmt = stmt.where(Order.rider_id == current_user.id)
-    # Vendors and admins see all orders (vendor filtering by product ownership is a future refinement).
+    elif current_user.role == UserRole.VENDOR:
+        stmt = (
+            stmt.join(OrderItem, OrderItem.order_id == Order.id)
+            .join(Product, Product.id == OrderItem.product_id)
+            .where(Product.vendor_id == current_user.id)
+            .distinct()
+        )
+    # Admins see all orders — no filter applied.
 
     result = await db.execute(stmt)
     return result.scalars().all()
@@ -107,7 +120,7 @@ async def get_order(
     current_user: User = Depends(get_current_user),
 ):
     order = await _get_order_or_404(order_id, db)
-    _assert_can_view(order, current_user)
+    await _assert_can_view(order, current_user, db)
     return order
 
 
@@ -122,6 +135,9 @@ async def update_order_status(
 
     if current_user.role == UserRole.RIDER and order.rider_id not in (None, current_user.id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Order assigned to another rider")
+
+    if current_user.role == UserRole.VENDOR and not await _vendor_owns_order(order, current_user.id, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your order")
 
     if payload.status not in _ALLOWED_TRANSITIONS.get(order.status, set()):
         raise HTTPException(
