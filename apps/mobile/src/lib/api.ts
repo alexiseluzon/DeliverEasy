@@ -7,6 +7,19 @@ export class ApiError extends Error {
   }
 }
 
+// In-memory cache of the current token, kept in sync by AuthContext.
+// Avoids an async SecureStore read on every request.
+let currentToken: string | null = null;
+let onUnauthorized: (() => void) | null = null;
+
+export function setAuthToken(token: string | null) {
+  currentToken = token;
+}
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorized = handler;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
@@ -15,8 +28,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const res = await fetch(`${API_BASE}${path}`, {
       ...init,
       signal: controller.signal,
-      headers: { "Content-Type": "application/json", ...init?.headers },
+      headers: {
+        "Content-Type": "application/json",
+        ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
+        ...init?.headers,
+      },
     });
+
+    if (res.status === 401) {
+      onUnauthorized?.();
+    }
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

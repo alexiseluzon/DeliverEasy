@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { ProductCard } from "@/components/ProductCard";
 import { api, ApiError } from "@/lib/api";
 import { colors, spacing } from "@/theme";
+import { useCart } from "@/context/CartContext";
 import type { Product } from "@/types";
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const { addItem, lines } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,6 +37,7 @@ export default function HomeScreen() {
   }
 
   function handleAdd(product: Product) {
+    addItem(product);
     setConfirmation(`${product.name} added to cart`);
     setTimeout(() => setConfirmation(null), 2500);
   }
@@ -45,6 +50,8 @@ export default function HomeScreen() {
     );
   }
 
+  const cartCount = lines.reduce((sum, l) => sum + l.quantity, 0);
+
   return (
     <View style={styles.container}>
       {error && (
@@ -52,6 +59,26 @@ export default function HomeScreen() {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
+
+      <View style={styles.topBar}>
+        <Pressable
+          onPress={() => router.push("/orders")}
+          accessibilityRole="button"
+          accessibilityLabel="View my orders"
+        >
+          <Text style={styles.link}>My orders</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push("/checkout")}
+          disabled={cartCount === 0}
+          accessibilityRole="button"
+          accessibilityLabel={`Go to checkout, ${cartCount} items in cart`}
+        >
+          <Text style={[styles.link, cartCount === 0 && styles.linkDisabled]}>
+            Cart ({cartCount})
+          </Text>
+        </Pressable>
+      </View>
 
       <FlatList
         data={products}
@@ -79,6 +106,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
   muted: { color: colors.textMuted, fontSize: 14 },
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  link: { color: colors.accent, fontSize: 14, fontWeight: "600" },
+  linkDisabled: { color: colors.textMuted },
   errorBanner: {
     backgroundColor: colors.danger + "22",
     borderColor: colors.danger,

@@ -33,6 +33,13 @@ export interface Product {
   is_active: boolean;
 }
 
+export interface OrderItem {
+  id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+}
+
 export interface Order {
   id: string;
   customer_id: string;
@@ -41,6 +48,7 @@ export interface Order {
   delivery_address: string;
   total_amount: number;
   created_at: string;
+  items: OrderItem[];
 }
 
 export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
@@ -50,3 +58,19 @@ export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
   "out_for_delivery",
   "delivered",
 ];
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: "Placed",
+  confirmed: "Confirmed",
+  preparing: "Preparing",
+  out_for_delivery: "Out for delivery",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
+export const NEXT_ORDER_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
+  pending: "confirmed",
+  confirmed: "preparing",
+  preparing: "out_for_delivery",
+  out_for_delivery: "delivered",
+};

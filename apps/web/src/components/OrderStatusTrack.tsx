@@ -1,13 +1,4 @@
-import { ORDER_STATUS_SEQUENCE, type OrderStatus } from "@/types";
-
-const LABELS: Record<OrderStatus, string> = {
-  pending: "Placed",
-  confirmed: "Confirmed",
-  preparing: "Preparing",
-  out_for_delivery: "Out for delivery",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
-};
+import { ORDER_STATUS_SEQUENCE, ORDER_STATUS_LABELS as LABELS, type OrderStatus } from "@/types";
 
 export function OrderStatusTrack({ status }: { status: OrderStatus }) {
   if (status === "cancelled") {

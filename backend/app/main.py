@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
-from app.routers import auth, products
+from app.routers import auth, orders, products
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("delivereasy")
@@ -28,6 +28,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(products.router, prefix="/api/v1")
+app.include_router(orders.router, prefix="/api/v1")
 
 
 @app.exception_handler(Exception)
