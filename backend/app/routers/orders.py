@@ -171,27 +171,25 @@ async def accept_order(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.RIDER)),
 ):
-    order = await _get_order_or_404(order_id, db)
-
-    if order.status != OrderStatus.PREPARING:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Order is not ready for pickup",
-        )
-
-    # Conditional UPDATE closes the race window between two riders accepting
-    # the same order at once — only the first to land this write wins;
-    # the loser's WHERE clause matches zero rows and rowcount reflects that.
+    # Conditional UPDATE is the single source of truth for whether this
+    # rider wins the claim — checking order.status beforehand and then
+    # updating separately leaves a race window where a second rider's
+    # pre-check already sees the first rider's new status and reports the
+    # wrong error (400 instead of 409).
     result = await db.execute(
         update(Order)
-        .where(Order.id == order_id, Order.rider_id.is_(None))
+        .where(Order.id == order_id, Order.status == OrderStatus.PREPARING, Order.rider_id.is_(None))
         .values(rider_id=current_user.id, status=OrderStatus.OUT_FOR_DELIVERY)
     )
+
     if result.rowcount == 0:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Order already claimed by another rider")
+        order = await _get_order_or_404(order_id, db)
+        if order.rider_id is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Order already claimed by another rider")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is not ready for pickup")
 
     await db.commit()
-    await db.refresh(order, attribute_names=["items", "rider_id", "status"])
+    order = await _get_order_or_404(order_id, db)
     await _notify_customer(order, db)
     return order
 
