@@ -1,9 +1,14 @@
+import os
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Tests set ENV_FILE=.env.test before importing the app (see tests/conftest.py)
+# so pytest never reads production credentials from .env.
+_ENV_FILE = os.getenv("ENV_FILE", ".env")
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, extra="ignore")
 
     database_url: str
     supabase_url: str = ""

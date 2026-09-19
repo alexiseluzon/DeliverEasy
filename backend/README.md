@@ -22,7 +22,13 @@ alembic upgrade head
 ```
 
 ## Tests
+Tests run against a **separate** Supabase project so they never touch production data —
+the suite truncates all app tables after every run.
+
 ```powershell
+Copy-Item .env.test.example .env.test   # fill in a separate test Supabase project
+$env:ENV_FILE = ".env.test"
+alembic upgrade head                     # apply schema to the test DB once
 pytest --cov=app
 ```
 
