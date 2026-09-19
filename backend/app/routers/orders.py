@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -111,6 +111,56 @@ async def list_my_orders(
 
     result = await db.execute(stmt)
     return result.scalars().all()
+
+
+@router.get("/available", response_model=list[OrderOut])
+async def list_available_orders(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.RIDER, UserRole.ADMIN)),
+    limit: int = Query(default=20, le=100),
+    offset: int = Query(default=0, ge=0),
+):
+    """Orders ready for pickup with no rider assigned yet."""
+    stmt = (
+        select(Order)
+        .options(selectinload(Order.items))
+        .where(Order.status == OrderStatus.PREPARING, Order.rider_id.is_(None))
+        .order_by(Order.created_at)
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.post("/{order_id}/accept", response_model=OrderOut)
+async def accept_order(
+    order_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.RIDER)),
+):
+    order = await _get_order_or_404(order_id, db)
+
+    if order.status != OrderStatus.PREPARING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order is not ready for pickup",
+        )
+
+    # Conditional UPDATE closes the race window between two riders accepting
+    # the same order at once — only the first to land this write wins;
+    # the loser's WHERE clause matches zero rows and rowcount reflects that.
+    result = await db.execute(
+        update(Order)
+        .where(Order.id == order_id, Order.rider_id.is_(None))
+        .values(rider_id=current_user.id, status=OrderStatus.OUT_FOR_DELIVERY)
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Order already claimed by another rider")
+
+    await db.commit()
+    await db.refresh(order, attribute_names=["items", "rider_id", "status"])
+    return order
 
 
 @router.get("/{order_id}", response_model=OrderOut)

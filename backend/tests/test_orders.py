@@ -175,3 +175,124 @@ async def test_vendor_cannot_view_or_update_others_order(client):
         headers={"Authorization": f"Bearer {vendor_a_token}"},
     )
     assert update.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_rider_sees_only_preparing_unassigned_orders(client):
+    vendor_token, _ = await _register(client, "vendore@example.com", "vendor")
+    product_id = await _make_product(client, vendor_token)
+    customer_token, _ = await _register(client, "custe@example.com", "customer")
+    rider_token, _ = await _register(client, "ridere@example.com", "rider")
+
+    order = await client.post(
+        "/api/v1/orders",
+        json={"delivery_address": "E St", "items": [{"product_id": product_id, "quantity": 1}]},
+        headers={"Authorization": f"Bearer {customer_token}"},
+    )
+    order_id = order.json()["id"]
+
+    # Still pending — shouldn't show up as available yet.
+    available_before = await client.get("/api/v1/orders/available", headers={"Authorization": f"Bearer {rider_token}"})
+    assert order_id not in [o["id"] for o in available_before.json()]
+
+    await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {vendor_token}"},
+    )
+    await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"status": "preparing"},
+        headers={"Authorization": f"Bearer {vendor_token}"},
+    )
+
+    available_after = await client.get("/api/v1/orders/available", headers={"Authorization": f"Bearer {rider_token}"})
+    assert order_id in [o["id"] for o in available_after.json()]
+
+
+@pytest.mark.asyncio
+async def test_rider_can_accept_available_order(client):
+    vendor_token, _ = await _register(client, "vendorf@example.com", "vendor")
+    product_id = await _make_product(client, vendor_token)
+    customer_token, _ = await _register(client, "custf@example.com", "customer")
+    rider_token, rider_id = await _register(client, "riderf@example.com", "rider")
+
+    order = await client.post(
+        "/api/v1/orders",
+        json={"delivery_address": "F St", "items": [{"product_id": product_id, "quantity": 1}]},
+        headers={"Authorization": f"Bearer {customer_token}"},
+    )
+    order_id = order.json()["id"]
+    await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {vendor_token}"},
+    )
+    await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"status": "preparing"},
+        headers={"Authorization": f"Bearer {vendor_token}"},
+    )
+
+    accept = await client.post(
+        f"/api/v1/orders/{order_id}/accept", headers={"Authorization": f"Bearer {rider_token}"}
+    )
+    assert accept.status_code == 200
+    assert accept.json()["rider_id"] == rider_id
+    assert accept.json()["status"] == "out_for_delivery"
+
+
+@pytest.mark.asyncio
+async def test_second_rider_cannot_accept_claimed_order(client):
+    vendor_token, _ = await _register(client, "vendorg@example.com", "vendor")
+    product_id = await _make_product(client, vendor_token)
+    customer_token, _ = await _register(client, "custg@example.com", "customer")
+    rider_a_token, _ = await _register(client, "ridera2@example.com", "rider")
+    rider_b_token, _ = await _register(client, "riderb2@example.com", "rider")
+
+    order = await client.post(
+        "/api/v1/orders",
+        json={"delivery_address": "G St", "items": [{"product_id": product_id, "quantity": 1}]},
+        headers={"Authorization": f"Bearer {customer_token}"},
+    )
+    order_id = order.json()["id"]
+    await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"status": "confirmed"},
+        headers={"Authorization": f"Bearer {vendor_token}"},
+    )
+    await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"status": "preparing"},
+        headers={"Authorization": f"Bearer {vendor_token}"},
+    )
+
+    first = await client.post(
+        f"/api/v1/orders/{order_id}/accept", headers={"Authorization": f"Bearer {rider_a_token}"}
+    )
+    assert first.status_code == 200
+
+    second = await client.post(
+        f"/api/v1/orders/{order_id}/accept", headers={"Authorization": f"Bearer {rider_b_token}"}
+    )
+    assert second.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_cannot_accept_order_not_ready_for_pickup(client):
+    vendor_token, _ = await _register(client, "vendorh@example.com", "vendor")
+    product_id = await _make_product(client, vendor_token)
+    customer_token, _ = await _register(client, "custh@example.com", "customer")
+    rider_token, _ = await _register(client, "riderh@example.com", "rider")
+
+    order = await client.post(
+        "/api/v1/orders",
+        json={"delivery_address": "H St", "items": [{"product_id": product_id, "quantity": 1}]},
+        headers={"Authorization": f"Bearer {customer_token}"},
+    )
+    order_id = order.json()["id"]  # still "pending" — not ready for pickup
+
+    res = await client.post(
+        f"/api/v1/orders/{order_id}/accept", headers={"Authorization": f"Bearer {rider_token}"}
+    )
+    assert res.status_code == 400

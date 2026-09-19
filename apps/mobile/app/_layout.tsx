@@ -18,8 +18,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const inAuthGroup = segments[0] === "login" || segments[0] === "register";
     if (!user && !inAuthGroup) {
       router.replace("/login");
-    } else if (user && inAuthGroup) {
-      router.replace("/");
+      return;
+    }
+    if (user && inAuthGroup) {
+      router.replace(user.role === "rider" ? "/deliveries" : "/");
+      return;
+    }
+    // Riders land on their delivery queue, not the customer catalog.
+    if (user && user.role === "rider" && segments[0] === undefined) {
+      router.replace("/deliveries");
     }
   }, [user, loading, segments, router]);
 
@@ -59,6 +66,7 @@ export default function RootLayout() {
               <Stack.Screen name="order/[id]" options={{ title: "Order tracking" }} />
               <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
               <Stack.Screen name="orders" options={{ title: "My orders" }} />
+              <Stack.Screen name="deliveries" options={{ title: "Available deliveries" }} />
               <Stack.Screen name="login" options={{ headerShown: false }} />
               <Stack.Screen name="register" options={{ headerShown: false }} />
             </Stack>
