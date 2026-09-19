@@ -3,8 +3,8 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { View, Text } from "react-native";
+import * as Notifications from "expo-notifications";
 import { colors } from "@/theme";
-import { registerForPushNotifications } from "@/lib/notifications";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 
@@ -42,12 +42,24 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  const router = useRouter();
+
   useEffect(() => {
-    // Silently no-ops on simulators / if the user declines — never blocks the UI.
-    registerForPushNotifications().catch((err) =>
-      console.warn("Push registration failed", err)
-    );
-  }, []);
+    // Handles the user tapping a push notification — routes to the
+    // relevant order, or the rider delivery queue for the broadcast
+    // "new delivery available" notification.
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as
+        | { order_id?: string; screen?: string }
+        | undefined;
+      if (data?.order_id) {
+        router.push(`/order/${data.order_id}`);
+      } else if (data?.screen === "deliveries") {
+        router.push("/deliveries");
+      }
+    });
+    return () => subscription.remove();
+  }, [router]);
 
   return (
     <SafeAreaProvider>

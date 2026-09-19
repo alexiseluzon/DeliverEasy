@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { getStoredUser, getToken, clearSession, setSession } from "@/lib/auth";
-import { setAuthToken, setUnauthorizedHandler } from "@/lib/api";
+import { setAuthToken, setUnauthorizedHandler, api } from "@/lib/api";
+import { registerForPushNotifications } from "@/lib/notifications";
 import type { AuthResponse, User } from "@/types";
 
 interface AuthContextValue {
@@ -31,6 +32,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return () => setUnauthorizedHandler(null);
   }, []);
+
+  // Registers the device's push token with the backend once a user is
+  // signed in — the endpoint requires auth, so this can't happen at
+  // app boot before login. Silently no-ops if the user declined
+  // notification permissions or is running on a simulator.
+  useEffect(() => {
+    if (!user) return;
+    registerForPushNotifications()
+      .then((token) => {
+        if (token) return api.put("/auth/push-token", { push_token: token });
+      })
+      .catch((err) => console.warn("Push token registration failed", err));
+  }, [user?.id]);
 
   async function login(res: AuthResponse) {
     await setSession(res.access_token, res.user);

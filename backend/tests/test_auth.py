@@ -84,3 +84,25 @@ async def test_create_product_requires_vendor_role(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_update_push_token(client):
+    reg = await client.post(
+        "/api/v1/auth/register",
+        json={"email": "pushuser@example.com", "full_name": "Push User", "password": "supersecret123"},
+    )
+    token = reg.json()["access_token"]
+
+    res = await client.put(
+        "/api/v1/auth/push-token",
+        json={"push_token": "ExponentPushToken[abc123]"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_update_push_token_requires_auth(client):
+    res = await client.put("/api/v1/auth/push-token", json={"push_token": "ExponentPushToken[abc123]"})
+    assert res.status_code == 401

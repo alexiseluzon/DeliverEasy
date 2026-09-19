@@ -28,6 +28,10 @@ class UserOut(BaseModel):
     role: UserRole
 
 
+class PushTokenUpdate(BaseModel):
+    push_token: str = Field(min_length=1, max_length=255)
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

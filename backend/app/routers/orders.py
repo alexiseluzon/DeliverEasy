@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, require_role
 from app.models.models import Order, OrderItem, OrderStatus, Product, User, UserRole
 from app.schemas.order import OrderCreate, OrderOut, OrderStatusUpdate
+from app.services.push import send_push_notification
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -20,6 +21,15 @@ _ALLOWED_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
     OrderStatus.OUT_FOR_DELIVERY: {OrderStatus.DELIVERED},
     OrderStatus.DELIVERED: set(),
     OrderStatus.CANCELLED: set(),
+}
+
+
+_STATUS_MESSAGES: dict[OrderStatus, str] = {
+    OrderStatus.CONFIRMED: "Your order has been confirmed.",
+    OrderStatus.PREPARING: "Your order is being prepared.",
+    OrderStatus.OUT_FOR_DELIVERY: "Your order is out for delivery!",
+    OrderStatus.DELIVERED: "Your order has been delivered.",
+    OrderStatus.CANCELLED: "Your order was cancelled.",
 }
 
 
@@ -45,6 +55,28 @@ async def _assert_can_view(order: Order, user: User, db: AsyncSession) -> None:
     if user.role == UserRole.VENDOR and await _vendor_owns_order(order, user.id, db):
         return
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your order")
+
+
+async def _notify_customer(order: Order, db: AsyncSession) -> None:
+    message = _STATUS_MESSAGES.get(order.status)
+    if not message:
+        return
+    customer = await db.get(User, order.customer_id)
+    if customer:
+        await send_push_notification(
+            customer.push_token, "Order update", message, data={"order_id": str(order.id)}
+        )
+
+
+async def _notify_available_riders(db: AsyncSession) -> None:
+    """Best-effort fan-out to every rider with a registered push token,
+    letting them know a new delivery is ready for pickup."""
+    stmt = select(User.push_token).where(User.role == UserRole.RIDER, User.push_token.is_not(None))
+    result = await db.execute(stmt)
+    for (token,) in result.all():
+        await send_push_notification(
+            token, "New delivery available", "A new order is ready for pickup.", data={"screen": "deliveries"}
+        )
 
 
 @router.post("", response_model=OrderOut, status_code=status.HTTP_201_CREATED)
@@ -160,6 +192,7 @@ async def accept_order(
 
     await db.commit()
     await db.refresh(order, attribute_names=["items", "rider_id", "status"])
+    await _notify_customer(order, db)
     return order
 
 
@@ -201,4 +234,7 @@ async def update_order_status(
     order.status = payload.status
     await db.commit()
     await db.refresh(order, attribute_names=["items"])
+    await _notify_customer(order, db)
+    if order.status == OrderStatus.PREPARING:
+        await _notify_available_riders(db)
     return order
