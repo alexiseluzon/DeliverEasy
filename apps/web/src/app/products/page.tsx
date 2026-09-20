@@ -5,7 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { RequireAuth } from "@/components/RequireAuth";
-import type { Product } from "@/types";
+import { formatMoney, type Product } from "@/types";
 
 export default function ProductsPage() {
   return (
@@ -144,7 +144,7 @@ function ProductsContent() {
             {products.map((p) => (
               <tr key={p.id} style={{ borderBottom: "1px solid var(--border)" }}>
                 <td style={{ padding: "10px 4px" }}>{p.name}</td>
-                <td style={{ padding: "10px 4px" }}>${p.price.toFixed(2)}</td>
+                <td style={{ padding: "10px 4px" }}>{formatMoney(p.price)}</td>
                 <td style={{ padding: "10px 4px" }}>{p.stock_quantity}</td>
                 <td style={{ padding: "10px 4px", textAlign: "right" }}>
                   <button

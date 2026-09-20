@@ -27,7 +27,7 @@ export interface Product {
   vendor_id: string;
   name: string;
   description: string | null;
-  price: number;
+  price: string; // Decimal, serialized as a string by the backend
   stock_quantity: number;
   image_url: string | null;
   is_active: boolean;
@@ -37,7 +37,7 @@ export interface OrderItem {
   id: string;
   product_id: string;
   quantity: number;
-  unit_price: number;
+  unit_price: string; // Decimal, serialized as a string by the backend
 }
 
 export interface Order {
@@ -46,7 +46,7 @@ export interface Order {
   rider_id: string | null;
   status: OrderStatus;
   delivery_address: string;
-  total_amount: number;
+  total_amount: string; // Decimal, serialized as a string by the backend
   created_at: string;
   items: OrderItem[];
 }
@@ -77,3 +77,8 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   delivered: "Delivered",
   cancelled: "Cancelled",
 };
+
+/** Backend sends Decimal fields (price, unit_price, total_amount) as strings. */
+export function formatMoney(value: string): string {
+  return `$${Number(value).toFixed(2)}`;
+}

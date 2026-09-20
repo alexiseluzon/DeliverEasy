@@ -3,7 +3,7 @@ import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } fr
 import { useRouter } from "expo-router";
 import { api, ApiError } from "@/lib/api";
 import { colors, spacing, radius } from "@/theme";
-import type { Order } from "@/types";
+import { formatMoney, type Order } from "@/types";
 
 export default function AvailableDeliveriesScreen() {
   const router = useRouter();
@@ -82,7 +82,7 @@ export default function AvailableDeliveriesScreen() {
               {item.delivery_address}
             </Text>
             <Text style={styles.meta}>
-              {item.items.length} item{item.items.length === 1 ? "" : "s"} · ${item.total_amount.toFixed(2)}
+              {item.items.length} item{item.items.length === 1 ? "" : "s"} · {formatMoney(item.total_amount)}
             </Text>
             <Pressable
               onPress={() => handleAccept(item)}

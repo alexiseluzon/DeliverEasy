@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { OrderStatusTrack } from "@/components/OrderStatusTrack";
 import { api, ApiError } from "@/lib/api";
 import { colors, spacing, radius } from "@/theme";
-import type { Order } from "@/types";
+import { formatMoney, type Order } from "@/types";
 
 export default function MyOrdersScreen() {
   const router = useRouter();
@@ -69,7 +69,7 @@ export default function MyOrdersScreen() {
             <Text style={styles.address} numberOfLines={1}>
               {item.delivery_address}
             </Text>
-            <Text style={styles.total}>${item.total_amount.toFixed(2)}</Text>
+            <Text style={styles.total}>{formatMoney(item.total_amount)}</Text>
             <View style={{ marginTop: spacing.sm }}>
               <OrderStatusTrack status={item.status} />
             </View>

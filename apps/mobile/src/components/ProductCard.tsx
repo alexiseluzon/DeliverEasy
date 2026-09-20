@@ -1,6 +1,6 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing } from "@/theme";
-import type { Product } from "@/types";
+import { formatMoney, type Product } from "@/types";
 
 export function ProductCard({ product, onAdd }: { product: Product; onAdd: (p: Product) => void }) {
   const outOfStock = product.stock_quantity <= 0;
@@ -17,7 +17,7 @@ export function ProductCard({ product, onAdd }: { product: Product; onAdd: (p: P
         <Text style={styles.name} numberOfLines={1}>
           {product.name}
         </Text>
-        <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+        <Text style={styles.price}>{formatMoney(product.price)}</Text>
         {outOfStock && <Text style={styles.outOfStock}>Out of stock</Text>}
       </View>
 

@@ -6,7 +6,7 @@ import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { RequireAuth } from "@/components/RequireAuth";
 import { OrderStatusTrack } from "@/components/OrderStatusTrack";
-import { NEXT_ORDER_STATUS, ORDER_STATUS_LABELS, type Order } from "@/types";
+import { NEXT_ORDER_STATUS, ORDER_STATUS_LABELS, formatMoney, type Order } from "@/types";
 
 export default function OrdersPage() {
   return (
@@ -81,12 +81,12 @@ function OrdersContent() {
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{order.delivery_address}</div>
                     <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
-                      {order.items.length} item{order.items.length === 1 ? "" : "s"} · $
-                      {Number(order.total_amount).toFixed(2)}
+                      {order.items.length} item{order.items.length === 1 ? "" : "s"} ·{" "}
+                      {formatMoney(order.total_amount)}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>${Number(order.total_amount).toFixed(2)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{formatMoney(order.total_amount)}</div>
                   </div>
                 </div>
 

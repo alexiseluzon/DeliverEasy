@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { OrderStatusTrack } from "@/components/OrderStatusTrack";
 import { api, ApiError } from "@/lib/api";
 import { colors, spacing } from "@/theme";
-import type { Order } from "@/types";
+import { formatMoney, type Order } from "@/types";
 
 export default function OrderTrackingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,7 +38,7 @@ export default function OrderTrackingScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.address}>{order.delivery_address}</Text>
-      <Text style={styles.total}>${order.total_amount.toFixed(2)}</Text>
+      <Text style={styles.total}>{formatMoney(order.total_amount)}</Text>
       <View style={{ marginTop: spacing.lg }}>
         <OrderStatusTrack status={order.status} />
       </View>

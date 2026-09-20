@@ -40,7 +40,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const total = useMemo(
-    () => lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0),
+    () => lines.reduce((sum, l) => sum + Number(l.product.price) * l.quantity, 0),
     [lines]
   );
 

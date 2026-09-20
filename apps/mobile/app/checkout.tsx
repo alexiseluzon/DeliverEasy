@@ -49,7 +49,7 @@ export default function CheckoutScreen() {
               {item.quantity}× {item.product.name}
             </Text>
             <View style={styles.lineRight}>
-              <Text style={styles.lineTotal}>${(item.product.price * item.quantity).toFixed(2)}</Text>
+              <Text style={styles.lineTotal}>${(Number(item.product.price) * item.quantity).toFixed(2)}</Text>
               <Pressable
                 onPress={() => removeItem(item.product.id)}
                 accessibilityRole="button"
