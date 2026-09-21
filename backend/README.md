@@ -44,6 +44,7 @@ pytest --cov=app
    - `JWT_SECRET_KEY` — a strong random value (not the dev placeholder)
    - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — if used
    - `ALLOWED_ORIGINS` — your deployed web app's URL once you have it (e.g. `https://your-app.vercel.app`); comma-separate multiple origins
+   - `PYTHON_VERSION` — `3.12.7` (Render may default to a newer Python with no prebuilt wheels for `pydantic-core` yet; a `runtime.txt` pin is also included, but setting this explicitly avoids relying on Render honoring it)
 5. Deploy. Render assigns a URL like `https://your-service.onrender.com` — note it for the web/mobile `NEXT_PUBLIC_API_URL` / `EXPO_PUBLIC_API_URL`.
 
 The start command runs migrations automatically on every deploy, so the production schema always matches the latest code — no manual `alembic upgrade head` step needed after the first deploy.
