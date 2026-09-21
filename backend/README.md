@@ -33,6 +33,19 @@ pytest --cov=app
 ```
 
 ## Deploy (Render)
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- Set env vars from `.env.example` in Render's dashboard (use your Supabase pooled connection string for `DATABASE_URL`)
+1. Push this repo to GitHub if you haven't already.
+2. On [render.com](https://render.com) → New → Web Service → connect your GitHub repo.
+3. Set:
+   - **Root directory**: `backend`
+   - **Build command**: `pip install -r requirements.txt`
+   - **Start command**: `alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+4. Add environment variables in Render's dashboard (values from your `.env`, **not** the file itself):
+   - `DATABASE_URL` — your Supabase pooled connection string
+   - `JWT_SECRET_KEY` — a strong random value (not the dev placeholder)
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — if used
+   - `ALLOWED_ORIGINS` — your deployed web app's URL once you have it (e.g. `https://your-app.vercel.app`); comma-separate multiple origins
+5. Deploy. Render assigns a URL like `https://your-service.onrender.com` — note it for the web/mobile `NEXT_PUBLIC_API_URL` / `EXPO_PUBLIC_API_URL`.
+
+The start command runs migrations automatically on every deploy, so the production schema always matches the latest code — no manual `alembic upgrade head` step needed after the first deploy.
+
+**Free tier note**: Render's free web services spin down after inactivity and take ~30–60s to wake on the next request — normal, not a bug, if your first request after idle time is slow.
