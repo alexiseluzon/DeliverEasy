@@ -5,7 +5,6 @@
     "scheme": "delivereasy",
     "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
       "backgroundColor": "#0E1116"
@@ -31,7 +30,6 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
           "color": "#FF7A33"
         }
       ],
