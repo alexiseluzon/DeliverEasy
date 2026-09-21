@@ -7,6 +7,7 @@ import { colors } from "@/theme";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { addNotificationTapListener } from "@/lib/notifications";
+import { LogoutHeaderButton } from "@/components/LogoutHeaderButton";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -72,11 +73,17 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: colors.bg },
               }}
             >
-              <Stack.Screen name="index" options={{ title: "DelivEasy" }} />
+              <Stack.Screen
+                name="index"
+                options={{ title: "DelivEasy", headerRight: () => <LogoutHeaderButton /> }}
+              />
               <Stack.Screen name="order/[id]" options={{ title: "Order tracking" }} />
               <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
               <Stack.Screen name="orders" options={{ title: "My orders" }} />
-              <Stack.Screen name="deliveries" options={{ title: "Available deliveries" }} />
+              <Stack.Screen
+                name="deliveries"
+                options={{ title: "Available deliveries", headerRight: () => <LogoutHeaderButton /> }}
+              />
               <Stack.Screen name="login" options={{ headerShown: false }} />
               <Stack.Screen name="register" options={{ headerShown: false }} />
             </Stack>
