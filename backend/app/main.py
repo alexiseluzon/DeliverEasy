@@ -7,6 +7,9 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.routers import auth, orders, products
 
+from sqlalchemy import text
+from app.core.database import AsyncSessionLocal
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("delivereasy")
 
@@ -43,4 +46,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 @app.get("/health", tags=["health"])
 async def health_check():
+    async with AsyncSessionLocal() as session:
+        await session.execute(text("SELECT 1"))
     return {"status": "ok"}
