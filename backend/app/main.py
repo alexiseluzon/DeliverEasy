@@ -44,7 +44,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
-@app.get("/health", tags=["health"])
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
     async with AsyncSessionLocal() as session:
         await session.execute(text("SELECT 1"))
